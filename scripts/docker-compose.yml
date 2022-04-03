@@ -1,0 +1,11 @@
+version: "3.0"
+
+services:
+  mongo:
+    container_name: mongo_db
+    image: mongo:latest
+    volumes:
+      - ~/mongo:/data/db
+    ports:
+      - "2717:27017"
+
