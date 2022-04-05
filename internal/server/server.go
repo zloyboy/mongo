@@ -54,10 +54,10 @@ func (s *server) handleStart() http.HandlerFunc {
 			return
 		}
 
-		if err := s.store.Start(req.Type); err != nil {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-		} else {
+		if err := s.store.Start(req.Type); err == nil {
 			w.WriteHeader(http.StatusCreated)
+		} else {
+			w.WriteHeader(http.StatusUnprocessableEntity)
 		}
 	}
 }

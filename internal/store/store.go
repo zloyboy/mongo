@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/zloyboy/mongo/internal/config"
@@ -32,7 +33,15 @@ func New(config *config.Config) (*Store, error) {
 func (s *Store) Start(tp string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	var result bson.M
+	if err := s.Events.FindOne(ctx, bson.D{{Key: "type", Value: tp}, {Key: "state", Value: 0}}).Decode(&result); err == nil {
+		log.Println(tp, "exists")
+		return nil
+	}
+
 	_, err := s.Events.InsertOne(ctx, bson.D{{Key: "type", Value: tp}, {Key: "state", Value: 0}})
+	log.Println(tp, "created")
 	return err
 }
 
