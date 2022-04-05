@@ -38,7 +38,11 @@ func (s *Store) Start(tp string) error {
 		return nil
 	}
 
-	_, err := s.Events.InsertOne(ctx, bson.D{{Key: "type", Value: tp}, {Key: "state", Value: 0}})
+	_, err := s.Events.InsertOne(ctx, bson.D{
+		{Key: "type", Value: tp},
+		{Key: "state", Value: 0},
+		{Key: "started_at", Value: time.Now().Local().Format("2006-01-02 15:04:05")},
+	})
 	return err
 }
 
@@ -47,7 +51,10 @@ func (s *Store) Finish(tp string) (bool, error) {
 	defer cancel()
 
 	filter := bson.D{{Key: "type", Value: tp}, {Key: "state", Value: 0}}
-	update := bson.D{{Key: "$set", Value: bson.D{{Key: "state", Value: 1}}}}
+	update := bson.D{{Key: "$set", Value: bson.D{
+		{Key: "state", Value: 1},
+		{Key: "finished_at", Value: time.Now().Local().Format("2006-01-02 15:04:05")},
+	}}}
 	res, err := s.Events.UpdateOne(ctx, filter, update)
 	finished := false
 	if res != nil && err == nil {

@@ -42,35 +42,57 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
+func isDigitLetter(s string) bool {
+	for _, c := range s {
+		if (c < 'a' || 'z' < c) && (c < '0' || '9' < c) {
+			return false
+		}
+	}
+	return true
+}
+
 type request struct {
 	Type string `json:"type"`
 }
 
+func decodeType(r *http.Request) (etype string, res bool) {
+	req := request{}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+		etype = req.Type
+		res = isDigitLetter(etype)
+	} else {
+		res = false
+	}
+
+	return etype, res
+}
+
 func (s *server) handleStart() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := request{}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		etype, res := decodeType(r)
+		if !res {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if err := s.store.Start(req.Type); err == nil {
+		if err := s.store.Start(etype); err == nil {
 			w.WriteHeader(http.StatusOK)
 		} else {
-			w.WriteHeader(http.StatusUnprocessableEntity)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
 }
 
 func (s *server) handleFinish() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := request{}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		etype, res := decodeType(r)
+		if !res {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if finished, err := s.store.Finish(req.Type); err == nil {
+		if finished, err := s.store.Finish(etype); err == nil {
 			if finished {
 				w.WriteHeader(http.StatusOK)
 			} else {
