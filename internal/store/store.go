@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/zloyboy/mongo/internal/config"
@@ -36,15 +35,26 @@ func (s *Store) Start(tp string) error {
 
 	var result bson.M
 	if err := s.Events.FindOne(ctx, bson.D{{Key: "type", Value: tp}, {Key: "state", Value: 0}}).Decode(&result); err == nil {
-		log.Println(tp, "exists")
 		return nil
 	}
 
 	_, err := s.Events.InsertOne(ctx, bson.D{{Key: "type", Value: tp}, {Key: "state", Value: 0}})
-	log.Println(tp, "created")
 	return err
 }
 
-func (s *Store) Finish() error {
-	return nil
+func (s *Store) Finish(tp string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.D{{Key: "type", Value: tp}, {Key: "state", Value: 0}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "state", Value: 1}}}}
+	res, err := s.Events.UpdateOne(ctx, filter, update)
+	finished := false
+	if res != nil && err == nil {
+		if res.ModifiedCount != 0 {
+			finished = true
+		}
+	}
+
+	return finished, err
 }

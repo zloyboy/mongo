@@ -55,7 +55,7 @@ func (s *server) handleStart() http.HandlerFunc {
 		}
 
 		if err := s.store.Start(req.Type); err == nil {
-			w.WriteHeader(http.StatusCreated)
+			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusUnprocessableEntity)
 		}
@@ -64,6 +64,20 @@ func (s *server) handleStart() http.HandlerFunc {
 
 func (s *server) handleFinish() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
+		req := request{}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if finished, err := s.store.Finish(req.Type); err == nil {
+			if finished {
+				w.WriteHeader(http.StatusOK)
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+			}
+		} else {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+		}
 	}
 }
