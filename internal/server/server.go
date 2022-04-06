@@ -68,15 +68,29 @@ func decodeType(r *http.Request) (etype string, res bool) {
 	return etype, res
 }
 
+func (s *server) startEvent(etype string, res chan bool) {
+	res <- s.store.Start(etype) == nil
+	close(res)
+}
+
+func (s *server) finishEvent(etype string, res chan store.Finish) {
+	res <- s.store.Finish(etype)
+	close(res)
+}
+
 func (s *server) handleStart() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		etype, res := decodeType(r)
-		if !res {
+		etype, dec := decodeType(r)
+		if !dec {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if err := s.store.Start(etype); err == nil {
+		ch := make(chan bool)
+		go s.startEvent(etype, ch)
+		res := <-ch
+
+		if res {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -86,14 +100,18 @@ func (s *server) handleStart() http.HandlerFunc {
 
 func (s *server) handleFinish() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		etype, res := decodeType(r)
-		if !res {
+		etype, dec := decodeType(r)
+		if !dec {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if finished, err := s.store.Finish(etype); err == nil {
-			if finished {
+		ch := make(chan store.Finish)
+		go s.finishEvent(etype, ch)
+		res := <-ch
+
+		if res.Error == nil {
+			if res.Finished {
 				w.WriteHeader(http.StatusOK)
 			} else {
 				w.WriteHeader(http.StatusNotFound)
