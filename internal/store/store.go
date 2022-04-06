@@ -11,12 +11,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type Store struct {
+type Store interface {
+	Start(string) error
+	Finish(string) Finish
+}
+
+type store struct {
 	Events *mongo.Collection
 	mx     sync.Mutex
 }
 
-func New(config *config.Config) (*Store, error) {
+func New(config *config.Config) (Store, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -28,10 +33,10 @@ func New(config *config.Config) (*Store, error) {
 		return nil, err
 	}
 
-	return &Store{Events: client.Database(config.MongoDB).Collection("events")}, nil
+	return &store{Events: client.Database(config.MongoDB).Collection("events")}, nil
 }
 
-func (s *Store) Start(tp string) error {
+func (s *store) Start(tp string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	s.mx.Lock()
@@ -55,7 +60,7 @@ type Finish struct {
 	Error    error
 }
 
-func (s *Store) Finish(tp string) Finish {
+func (s *store) Finish(tp string) Finish {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	s.mx.Lock()

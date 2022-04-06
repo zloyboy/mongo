@@ -11,10 +11,10 @@ import (
 
 type server struct {
 	router *mux.Router
-	store  *store.Store
+	store  store.Store
 }
 
-func newServer(store *store.Store) *server {
+func newServer(store store.Store) *server {
 	s := &server{
 		router: mux.NewRouter(),
 		store:  store,
