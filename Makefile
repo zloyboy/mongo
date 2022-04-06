@@ -1,9 +1,6 @@
 .PHONY: build
 build:
 	go build -v ./cmd/server
-
-.PHONY: test
-test:
-	go test -v -race -timeout 10s ./...
+	docker-compose up -d
 
 .DEFAULT_GOAL := build
